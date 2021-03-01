@@ -1,5 +1,7 @@
 package nl.bravobit.ffmpeg.example;
 
+import android.media.MediaExtractor;
+import android.media.MediaFormat;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -10,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatTextView;
 
 import java.io.File;
+import java.io.IOException;
 
 import nl.bravobit.ffmpeg.ExecuteBinaryResponseHandler;
 import nl.bravobit.ffmpeg.FFmpeg;
@@ -97,9 +100,26 @@ public class ExampleActivity extends AppCompatActivity {
 
         File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "sample.mp4");
         File output = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "output.mp4");
-        File gif1 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "test1.gif");
-        File gif2 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "cartoon.gif");
+        File gif1 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "1.png");
+        File gif2 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "2.gif");
         outPutPath = output.getPath();
+
+
+        try {
+            MediaExtractor mediaExtractor = new MediaExtractor();
+            mediaExtractor.setDataSource(file.getPath());
+            MediaFormat format = mediaExtractor.getTrackFormat(0);
+            mediaExtractor.release();
+            if (format.containsKey(MediaFormat.KEY_FRAME_RATE)) {
+                int frameRate = format.getInteger(MediaFormat.KEY_FRAME_RATE);
+                int frames = (int) (frameRate * (format.getLong(MediaFormat.KEY_DURATION) / 1000000));
+                Log.e(TAG, "initCommand: frames " + frames);
+                Log.e(TAG, "initCommand: frameRate " + frameRate);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
 
         final String cmd1[] = {
@@ -193,6 +213,27 @@ public class ExampleActivity extends AppCompatActivity {
 //        "[0:v]scale=50:50[base];[1:v]scale=50:50[image1];[2:v]scale=200:200[image2];[base][image1]overlay=70:70[temp1];[temp1][image2]overlay=70:70"
 
 
+        // for single gif
+
+        String cmd2[] = {
+                "-y"
+                , "-i", file.getPath(),
+                "-i", gif1.getPath(),
+                "-filter_complex",
+                "[0:v]scale=0:0[base];" +//video
+                        "[1:v]scale=1080:2060,rotate=0:c=none:ow=rotw(0):oh=roth(0)[image1];" +//gif 1
+                        "[base][image1]overlay=0:0"
+                , "-frames:v", "80"
+                , "-codec:a"
+                , "copy"
+                , "-codec:v"
+                , "libx264"
+                , output.getPath()
+        };
+
+/*
+
+
         String cmd2[] = {
                 "-y"
                 , "-i", file.getPath()
@@ -203,17 +244,16 @@ public class ExampleActivity extends AppCompatActivity {
                 "-ignore_loop", "0",
                 "-i", gif2.getPath(),
                 "-filter_complex",
-                /* "[1]scale=400:400 [OVERLY];" +
-                     "[0][OVERLY]overlay=x=100:y=200"*/
 
-                        "[0:v]scale=0:0[base];" +//video
-                        "[1:v]scale=100:100,rotate=8:c=none:ow=rotw(8):oh=roth(8)[image1];" +//gif 1
+
+                "[0:v]scale=0:0[base];" +//video
+                        "[1:v]scale=0:0,rotate=0:c=none:ow=rotw(0):oh=roth(0)[image1];" +//gif 1
                         "[2:v]scale=100:100,rotate=8:c=none:ow=rotw(8):oh=roth(8)[image2];" +//gif 2
                         "[3:v]scale=100:100,rotate=16:c=none:ow=rotw(16):oh=roth(16)[image3];" +//gif 2
+                        "[base][image1]overlay=0:0[temp1];" +//set overlay for gif 1
+                        "[temp1][image2]overlay=100:400[temp2];" +//set overlay for gif 2
+                        "[temp2][image3]overlay=100:600"//set overlay for gif 3
 
-                        "[base][image1]overlay=100:200[temp1];" +
-                        "[temp1][image2]overlay=100:400[temp2];"+
-                        "[temp2][image3]overlay=100:600"
 
                 , "-frames:v", "400"
                 , "-codec:a"
@@ -223,10 +263,7 @@ public class ExampleActivity extends AppCompatActivity {
                 , output.getPath()
         };
 
-
-
-
-
+*/
 
         /*
 
@@ -285,4 +322,6 @@ public class ExampleActivity extends AppCompatActivity {
 
 
     }
+
+
 }
